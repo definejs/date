@@ -1,6 +1,6 @@
 {
   "name": "@definejs/date",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {},
@@ -13,6 +13,6 @@
     "url": "https://github.com/definejs/date.git"
   },
   "dependencies": {
-    "@definejs/string": "^0.1.0"
+    "@definejs/string": "^1.0.0"
   }
 }
