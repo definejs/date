@@ -1,48 +1,107 @@
 const $String = require('@definejs/string');
+const Item = require('./Date/Item');
 
-let DELTA = 0; //用于存放参考时间(如服务器时间)和本地时间的差值。
+const MS = 1;
+const SECOND = 1000 * MS;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
 
 
-function getDateItem(s) {
-    let separator =
-        s.indexOf('.') > 0 ? '.' :
-        s.indexOf('-') > 0 ? '-' :
-        s.indexOf('/') > 0 ? '/' :
-        s.indexOf('_') > 0 ? '_' : null;
 
-    if (!separator) {
-        return null;
-    }
+let meta = {
+    delta: 0,   //用于存放参考时间(如服务器时间)和本地时间的差值。
+};
 
-    let ps = s.split(separator);
-
-    return {
-        'yyyy': ps[0],
-        'MM': ps[1] || 0,
-        'dd': ps[2] || 1,
-    };
-}
-
-function getTimeItem(s) {
-    let separator = s.indexOf(':') > 0 ? ':' : null;
-    
-    if (!separator) {
-        return null;
-    }
-
-    let ps = s.split(separator);
-
-    return {
-        'HH': ps[0] || 0,
-        'mm': ps[1] || 0,
-        'ss': ps[2] || 0,
-    };
-}
 
 /**
 * 日期时间工具。
 */
 module.exports = exports = {
+    /**
+    * 一毫秒对应的毫秒数。
+    */
+    MS,
+
+    /**
+    * 一秒对应的毫秒数。
+    */
+    SECOND,
+
+    /**
+    * 一分钟对应的毫秒数。
+    */
+    MINUTE,
+
+    /**
+    * 一小时对应的毫秒数。
+    */
+    HOUR,
+
+    /**
+    * 一天对应的毫秒数。
+    */
+    DAY,
+
+    /**
+    * 一周对应的毫秒数。
+    */
+    WEEK,
+
+    /**
+    * 把指定的时间长度解析成等价的几周几天几小时几分几秒几毫秒。
+    * 如 3750*1000，会给解析成 1 小时 2 分 30 秒。
+    * @param {number} value 时间长度，单位为毫秒。
+    * @returns {Object} 返回一个数据对象。
+    *   {
+    *       weeks: 0,           //对应的整数周。
+    *       days: 0,            //扣除整数周后剩余的天数。
+    *       hours: 0,           //扣除整数天后剩余的小时数。
+    *       minutes: 0,         //扣除整数小时后剩余的分钟数。
+    *       seconds: 0,         //扣除整数分钟数后剩余的秒数。
+    *       milliseconds: 0,    //扣除整数秒数后剩余的毫秒数。
+    *       value: 0,           //原始的毫秒数。
+    *       desc: {             //描述。
+    *           ww: '',         //`n周`
+    *           dd: '',         //`n天`
+    *           hh: '',         //`n小时`
+    *           mm: '',         //`n分钟`
+    *           ss: '',         //`n秒`
+    *           ms: '',         //`n毫秒`
+    *       },
+    *   }
+    */
+    size(value) {
+        let ww = Math.floor(value / WEEK);
+        let dd = Math.floor(value % WEEK / DAY);
+        let hh = Math.floor(value % DAY / HOUR);
+        let mm = Math.floor(value % DAY % HOUR / MINUTE);
+        let ss = Math.floor(value % DAY % HOUR % MINUTE / SECOND);
+        let ms = Math.floor(value % DAY % HOUR % MINUTE % SECOND / MS);
+
+        let desc = {
+            'ww': ww > 0 ? `${ww}周` : ``,
+            'dd': dd > 0 ? `${dd}天` : ``,
+            'hh': hh > 0 ? `${hh}小时` : ``,
+            'mm': mm > 0 ? `${mm}分` : ``,
+            'ss': ss > 0 ? `${ss}秒` : ``,
+            'ms': ms > 0 ? `${ms}毫秒` : ``,
+        };
+
+
+        return {
+            'weeks': ww,
+            'days': dd,
+            'hours': hh,
+            'minutes': mm,
+            'seconds': ss,
+            'milliseconds': ms,
+            'value': value,
+            'desc': desc,
+        };
+    },
+
     /**
     * 把参数 value 解析成等价的日期时间实例。
     * @param {Date|String} value 要进行解析的参数，可接受的类型为：
@@ -126,19 +185,19 @@ module.exports = exports = {
 
 
         if (date && time) {
-            let d = getDateItem(date);
-            let t = getTimeItem(time);
+            let d = Item.getDate(date);
+            let t = Item.getTime(time);
             return new Date(d.yyyy, d.MM - 1, d.dd, t.HH, t.mm, t.ss);
         }
 
         if (date) {
-            let d = getDateItem(date);
+            let d = Item.getDate(date);
             return new Date(d.yyyy, d.MM - 1, d.dd);
         }
 
         if (time) {
             let now = new Date();
-            let t = getTimeItem(time);
+            let t = Item.getTime(time);
             return new Date(now.getFullYear(), now.getMonth(), now.getDate(), t.HH, t.mm, t.ss);
         }
 
@@ -378,7 +437,7 @@ module.exports = exports = {
             throw new Error('无法识别的日期时间格式: ' + datetime);
         }
 
-        DELTA = dt - Date.now();
+        meta.delta = dt - Date.now();
     },
 
     /**
@@ -387,8 +446,8 @@ module.exports = exports = {
     get(formater) {
         let dt = new Date();
 
-        if (DELTA != 0) {
-            dt = exports.add(dt, DELTA);
+        if (meta.delta != 0) {
+            dt = exports.add(dt, meta.delta);
         }
 
         if (formater) {
@@ -397,4 +456,6 @@ module.exports = exports = {
 
         return dt;
     },
+
+    
 };
